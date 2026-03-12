@@ -82,6 +82,8 @@ def clean_input_data(df: pd.DataFrame) -> pd.DataFrame:
     # drop future dates
     cleaned_df = cleaned_df[cleaned_df["report_receipt_date"] <= pd.Timestamp.today()]
     
+    # fix indexing 
+    cleaned_df = cleaned_df.reset_index(drop=True)
     # ----------------------------
     return cleaned_df
 
