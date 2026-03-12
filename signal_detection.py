@@ -113,10 +113,20 @@ def calculate_prr(df: pd.DataFrame) -> pd.Series:
         PRR = 0.05 / 0.0051 ≈ 9.8
     """
     validate_required_cols(df, {'A', 'B', 'C', 'D'})
-    # --- TODO: YOUR CODE HERE ---
+    # --- Implementation: vectorized PRR calculation ---
+    A = df['A']
+    B = df['B']
+    C = df['C']
+    D = df['D']
 
-    # ----------------------------
-    return pd.Series()
+    # Proportions for the drug and for all other drugs
+    drug_prop = A / (A + B)
+    others_prop = C / (C + D)
+
+    # PRR = (A / (A + B)) / (C / (C + D))
+    prr = drug_prop / others_prop
+
+    return prr
 
 
 def calculate_chi_squared(df: pd.DataFrame) -> pd.Series:
