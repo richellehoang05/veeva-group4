@@ -155,9 +155,22 @@ def calculate_chi_squared(df: pd.DataFrame) -> pd.Series:
     """
     validate_required_cols(df, {'A', 'B', 'C', 'D'})
     # --- TODO: YOUR CODE HERE ---
-
+    A = df['A']
+    B = df['B']
+    C = df['C']
+    D = df['D']
+    N = df[['A', 'B', 'C', 'D']].sum(axis=1)
+    AD = A * D
+    BC = B * C
+    Numerator = N * ((AD - BC).abs() - N/2).pow(2)
+    A_plus_B = df[['A', 'B']].sum(axis=1)
+    C_plus_D = df[['C', 'D']].sum(axis=1)
+    A_plus_C = df[['A', 'C']].sum(axis=1)
+    B_plus_D = df[['B', 'D']].sum(axis=1)
+    Denom = (A_plus_B) * (C_plus_D) * (A_plus_C) * (B_plus_D)
+    stat = Numerator / Denom
     # ----------------------------
-    return pd.Series()
+    return stat
 
 
 def calculate_statistics(df: pd.DataFrame, background_incidence_path: str) -> pd.DataFrame:
