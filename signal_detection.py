@@ -197,7 +197,33 @@ def calculate_statistics(df: pd.DataFrame, background_incidence_path: str) -> pd
     background_incidence = load_data(background_incidence_path)
 
     # --- TODO: YOUR CODE HERE ---
+    # 1. Count occurrences for each drug-event pair (A)
+    # Assuming the raw data has 'drug_name' and 'event_term' columns
+    results_df = df.groupby(['drug_name', 'event_term']).size().reset_index(name='A')
 
+    # 2. Calculate marginal totals to derive B, C, and D
+    # Total reports for each drug (A + B)
+    drug_totals = df.groupby('drug_name').size().reset_index(name='drug_total')
+
+    # Total reports for each event (A + C)
+    event_totals = df.groupby('event_term').size().reset_index(name='event_total')
+
+    # Total number of all reports (N = A + B + C + D)
+    n_total = len(df)
+
+    # 3. Merge totals back into our results table
+    results_df = results_df.merge(drug_totals, on='drug_name')
+    results_df = results_df.merge(event_totals, on='event_term')
+
+    # 4. Derive B, C, and D based on the marginals
+    # B = (Total reports for drug) - (Reports with this event)
+    results_df['B'] = results_df['drug_total'] - results_df['A']
+
+    # C = (Total reports for event) - (Reports with this drug)
+    results_df['C'] = results_df['event_total'] - results_df['A']
+
+    # D = (Total population) - (A + B + C)
+    results_df['D'] = n_total - (results_df['A'] + results_df['B'] + results_df['C'])
     # ----------------------------
     results_df['prr'] = calculate_prr(results_df)
     results_df['chi_squared'] = calculate_chi_squared(results_df)
@@ -219,7 +245,34 @@ def analyze_signals(df: pd.DataFrame, drug_profiles_path: str) -> pd.DataFrame:
     drug_profiles = pd.read_json(drug_profiles_path)
 
     # --- TODO: YOUR CODE HERE ---
+    def is_investigation_required(row):
+        # 1. Check statistical significance thresholds
+        # PRR must be >= 2.0 and Chi-Squared >= 4.0
+        statistically_sig = (row['prr'] >= PRR_THRESHOLD) and (row['chi_squared'] >= CHI_SQUARED_THRESHOLD)
 
+        if not statistically_sig:
+            return False
+
+        # 2. Get the profile for the specific drug
+        # We match the drug name from our results to the 'drug_name' in the JSON
+        drug_info = drug_profiles[drug_profiles['drug_name'].str.upper() == str(row['drug_name']).upper()]
+
+        if not drug_info.empty:
+            profile = drug_info.iloc[0]
+            # Standardize terms to lower case for accurate comparison
+            current_event = str(row['event_term']).lower()
+            known_side_effects = [str(se).lower() for se in profile.get('side_effects', [])]
+            known_indications = [str(ind).lower() for ind in profile.get('indications', [])]
+
+            # 3. If the event is already a known side effect or an indication,
+            # it is not a "new" signal requiring investigation
+            if current_event in known_side_effects or current_event in known_indications:
+                return False
+
+        return True
+
+    # Create the column required by the main() function's final steps
+    results_df['requires_review'] = results_df.apply(is_investigation_required, axis=1)
     # ----------------------------
 
     return results_df
